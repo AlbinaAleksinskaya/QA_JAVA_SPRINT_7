@@ -5,7 +5,6 @@ import io.restassured.specification.RequestSpecification;
 import org.junit.BeforeClass;
 
 public class BaseTest {
-
     @BeforeClass
     static public void setUpBase () {
         RequestSpecification requestSpec = new RequestSpecBuilder()
