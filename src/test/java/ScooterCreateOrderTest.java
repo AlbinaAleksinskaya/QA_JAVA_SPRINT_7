@@ -1,63 +1,54 @@
-import api.endpoints.EndPoints;
-import api.models.Order;
 import io.qameta.allure.junit4.DisplayName;
-import io.restassured.path.json.JsonPath;
-import io.restassured.response.Response;
-import org.junit.After;
+import io.restassured.response.ValidatableResponse;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import api.client.OrdersClient;
+import api.models.Order;
 
-import java.net.HttpURLConnection;
-
-import static io.restassured.RestAssured.*;
-import static org.hamcrest.Matchers.notNullValue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 
 @RunWith(Parameterized.class)
-public class ScooterCreateOrderTest extends BaseTest {
-
-    private String[] color;
+public class ScooterCreateOrderTest {
+    private OrdersClient ordersApiClient;
     private int track;
+
+    private final String[] color;
 
     public ScooterCreateOrderTest(String[] color) {
         this.color = color;
     }
 
     @Parameterized.Parameters
-    public static Object[][] getOrderData() {
+    public static Object[][] getColorList() {
         return new Object[][]{
-                { new String[] {"BLACK"}},
-                { new String[] {"GREY"}},
-                { new String[] {"BLACK", "GREY"}},
-                { new String[] {}}
+                {new String[]{"BLACK"}},
+                {new String[]{"GREY"}},
+                {new String[]{"GREY", "BLACK"}},
+                {new String[0]}
+
         };
     }
 
-    @After
-    public void tearDown() {
-        String cancelBody = "{\"track\":" + track + "}";
-        given()
-                .body(cancelBody)
-                .when()
-                .put(EndPoints.ORDER_CANCEL);
+    @Before
+    public void setUp() {
+        ordersApiClient = new OrdersClient();
     }
 
     @Test
-    @DisplayName("Check status code and track of /api/v1/orders when data is valid (full check for field color)")
-    public void checkStatusCodeAndBodyCreateOrderWithValidData() {
-        Order order = new Order(color);
-        order.setUpFieldsForRequest();
-        Response response = given()
-                .body(order)
-                .when()
-                .post(EndPoints.ORDER_CREATE_OR_GET);
-        response.then()
-                .assertThat()
-                .statusCode(HttpURLConnection.HTTP_CREATED)
-                .and()
-                .body("track", notNullValue());
-        String responseString = response.asString();
-        JsonPath jsonPath = new JsonPath(responseString);
-        track = jsonPath.getInt("track");
+    @DisplayName("Create order")
+    public void createOrderWithColors() {
+        Order order = Order.getRandom();
+        order.setColor(color);
+
+        ValidatableResponse response = (ValidatableResponse) ordersApiClient.createOrders(order);
+        int statusCode = response.extract().statusCode();
+        track = response.extract().path("track");
+
+        assertEquals("statusCode неверный", 201, statusCode);
+        assertNotEquals("Track некоректный", 0, track);
     }
+
 }

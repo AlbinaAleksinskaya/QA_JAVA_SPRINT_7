@@ -1,6 +1,7 @@
 import api.client.CourierClient;
 import api.endpoints.EndPoints;
 import api.models.Courier;
+import api.utils.ScooterGenerateCurierData;
 import io.qameta.allure.junit4.DisplayName;
 import io.restassured.path.json.JsonPath;
 import io.restassured.response.ValidatableResponse;
@@ -13,15 +14,15 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 public class ScooterRegisterCourierTest extends BaseTest {
-    final private String login = RandomStringUtils.randomAlphabetic(10);
-    final private String password = RandomStringUtils.randomAlphabetic(10);
-    final private String firstName = RandomStringUtils.randomAlphabetic(10);
     private CourierClient courierClient;
+    private ScooterGenerateCurierData scooterGenerateCurierData;
+    private int courierId;
     private Courier courier;
 
     @Before
     public void setUp() {
         courierClient = new CourierClient();
+        scooterGenerateCurierData = new ScooterGenerateCurierData();
     }
 
     @Test
@@ -59,4 +60,17 @@ public class ScooterRegisterCourierTest extends BaseTest {
         assertEquals("statusCode неверный", 400, statusCode);
         assertTrue("Сообщение о создании курьера некорректно", courierWithoutCredentials.contains(message));
      }
+
+    @Test
+    @DisplayName("Create courier with used login")
+    public void createSecondIsSameCourierError() {
+        courier = Courier.getRandom();
+        String message = "Этот логин уже используется";
+        boolean courierCreated = scooterGenerateCurierData.createCourier(courier);
+        ValidatableResponse response = courierClient.createCourier(courier);
+        int statusCode = response.extract().statusCode();
+        String secondCourierCreated = response.extract().path("message");
+        assertEquals("statusCode неверный", 409, statusCode);
+        assertTrue("Сообщение о создании второго такого же курьера некорректно", secondCourierCreated.contains(message));
+    }
 }

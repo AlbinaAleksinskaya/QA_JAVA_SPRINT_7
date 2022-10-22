@@ -1,115 +1,69 @@
 import api.client.CourierClient;
-import api.endpoints.EndPoints;
 import api.models.Courier;
-import api.models.ScooterRegisterCourier;
+import api.models.CourierCredentials;
+import api.utils.ScooterGenerateCurierData;
+import api.utils.ScooterGenerateOrderData;
 import io.qameta.allure.junit4.DisplayName;
-import io.restassured.path.json.JsonPath;
+import io.restassured.response.ValidatableResponse;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertEquals;
 
-import java.net.HttpURLConnection;
-import java.util.ArrayList;
-
-import static io.restassured.RestAssured.delete;
-import static io.restassured.RestAssured.given;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.notNullValue;
+import static org.junit.Assert.*;
 
 public class ScooterLoginCourierTest extends BaseTest {
-
-
-    private String login;
-    private String password;
     private String random = RandomStringUtils.randomAlphabetic(10);
     private CourierClient courierClient;
     private Courier courier;
+    private int courierId;
+    private ScooterGenerateOrderData scooterGenerateOrderData;
+    private ScooterGenerateCurierData scooterGenerateCurierData;
 
 
     @Before
     public void setUp() {
         courierClient = new CourierClient();
-        ScooterRegisterCourier scooterRegisterCourier = new ScooterRegisterCourier();
-        ArrayList<String> loginPass = scooterRegisterCourier.registerNewCourierAndReturnLoginPassword();
-        login = loginPass.get(0);
-        password = loginPass.get(1);
+        scooterGenerateOrderData = new ScooterGenerateOrderData();
     }
 
     @After
     public void tearDown() {
-        Courier registerCourierLogin = new Courier(login, password);
-        String response = given()
-                .body(registerCourierLogin)
-                .when()
-                .post(EndPoints.COURIER_LOGIN)
-                .asString();
-        JsonPath jsonPath = new JsonPath(response);
-        String userId = jsonPath.getString("id");
-        delete(EndPoints.COURIER_REGISTER_OR_DELETE + userId);
-    }
-
-
-
-    @Test
-    @DisplayName("Check status code and body of /api/v1/courier/login when login is valid, but password is invalid")
-    public void checkStatusCodeBodyLoginCourierWithIncorrectPassword() {
-        Courier courier = new Courier(login, random);
-        given()
-                .body(courier)
-                .when()
-                .post(EndPoints.COURIER_LOGIN)
-                .then()
-                .assertThat()
-                .statusCode(HttpURLConnection.HTTP_NOT_FOUND)
-                .and()
-                .body("message", equalTo("Учетная запись не найдена"));
+        boolean isCourierDeleted = scooterGenerateCurierData.deleteCourier(courierId);
+        assertTrue("Курьер не удален", isCourierDeleted);
     }
 
     @Test
-    @DisplayName("Check status code and body of /api/v1/courier/login when login is invalid, but password is valid")
-    public void checkStatusCodeBodyLoginCourierWithIncorrectLogin() {
-        Courier courier = new Courier(random, password);
-        given()
-                .body(courier)
-                .when()
-                .post(EndPoints.COURIER_LOGIN)
-                .then()
-                .assertThat()
-                .statusCode(HttpURLConnection.HTTP_NOT_FOUND)
-                .and()
-                .body("message", equalTo("Учетная запись не найдена"));
+    @DisplayName("Courier auth")
+    public void loginCourierValid() {
+        courier = new Courier(RandomStringUtils.randomAlphabetic(10), RandomStringUtils.randomAlphabetic(10), RandomStringUtils.randomAlphabetic(10));
+        ValidatableResponse response = (ValidatableResponse) courierClient.loginCourier(CourierCredentials.getCredentials(courier));
+        int statusCode = response.extract().statusCode();
+        courierId = response.extract().path("id");
+
+        assertEquals("statusCode неверный", 200, statusCode);
+        assertNotEquals("Id курьера некоректный", 0, courierId);
     }
 
     @Test
-    @DisplayName("Check status code and body of /api/v1/courier/login when login and password invalid")
-    public void checkStatusCodeBodyLoginWithNonExistCourier() {
-        Courier courier = new Courier(random, random);
-        given()
-                .body(courier)
-                .when()
-                .post(EndPoints.COURIER_LOGIN)
-                .then()
-                .assertThat()
-                .statusCode(HttpURLConnection.HTTP_NOT_FOUND)
-                .and()
-                .body("message", equalTo("Учетная запись не найдена"));
+    @DisplayName("Auth courier with invalid data")
+    public void loginCourierInvalid() {
+        String message = "Учетная запись не найдена";
+        ValidatableResponse response = (ValidatableResponse) courierClient.loginCourier(courier);
+        int statusCode = response.extract().statusCode();
+        String errorMessage = response.extract().path("message");
+        assertEquals("statusCode неверный", 404, statusCode);
+        assertTrue("Сообщение об ошибке некорректно", errorMessage.contains(message));
     }
 
     @Test
-    @DisplayName("Check status code and body of /api/v1/courier/login when login field is missing")
-    public  void checkStatusCodeBodyLoginCourierWithoutFillInLogin() {
-        String registerBody = "{\"password\":\"" + password + "\"}";
-        given()
-                .body(registerBody)
-                .when()
-                .post(EndPoints.COURIER_LOGIN)
-                .then()
-                .assertThat()
-                .statusCode(HttpURLConnection.HTTP_BAD_REQUEST)
-                .and()
-                .body("message", equalTo("Недостаточно данных для входа"));
+    @DisplayName("Auth courier with nullable login")
+    public void loginCourierEmptyLogin() {
+        String message = "Недостаточно данных для входа";
+        ValidatableResponse response = (ValidatableResponse) courierClient.loginCourier(courier);
+        int statusCode = response.extract().statusCode();
+        String errorMessage = response.extract().path("message");
+        assertEquals("statusCode неверный", 400, statusCode);
+        assertTrue("Сообщение об ошибке некорректно", errorMessage.contains(message));
     }
 }

@@ -1,80 +1,61 @@
-import api.endpoints.EndPoints;
-import api.models.Courier;
-import api.models.ScooterRegisterCourier;
 import io.qameta.allure.junit4.DisplayName;
-import io.restassured.path.json.JsonPath;
-import org.apache.commons.lang3.RandomUtils;
-import org.junit.After;
+import io.restassured.response.ValidatableResponse;
 import org.junit.Before;
 import org.junit.Test;
-
-import java.util.ArrayList;
-
-import static io.restassured.RestAssured.delete;
+import api.client.CourierClient;
+import api.endpoints.EndPoints;
+import api.utils.ScooterGenerateCurierData;
 import static io.restassured.RestAssured.given;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.notNullValue;
+import static org.junit.Assert.*;
 
 public class ScooterDeleteCourierTest extends BaseTest {
-
-
-    private int invalidId = RandomUtils.nextInt(10000000, 99999999);
-    private String courierId;
-
+    private CourierClient courierApiClient;
+    private ScooterGenerateCurierData scooterGenerateCurierData;
+    private int courierId;
 
     @Before
     public void setUp() {
-        ScooterRegisterCourier scooterRegisterCourier = new ScooterRegisterCourier();
-        ArrayList<String> loginPass = scooterRegisterCourier.registerNewCourierAndReturnLoginPassword();
-        Courier registerCourierLogin = new Courier(loginPass.get(0), loginPass.get(1));
-        String response = given()
-                .body(registerCourierLogin)
-                .when()
-                .post(EndPoints.COURIER_LOGIN)
-                .asString();
-        JsonPath jsonPath = new JsonPath(response);
-        courierId = jsonPath.getString("id");
+        courierApiClient = new CourierClient();
+        scooterGenerateCurierData = new ScooterGenerateCurierData();
     }
-
-    @After
-    public void tearDown() {
-        delete(EndPoints.COURIER_REGISTER_OR_DELETE + courierId);
-    }
-
-
-//    @Test
-//    @DisplayName("Check message error of /api/v1/courier/:id when id is non-exist")
-//    public void checkMessageErrorDeleteCourierWhenIdNonExist() {
-//        given()
-//                .when()
-//                .delete(api.endpoints.EndPoints.COURIER_REGISTER_OR_DELETE + invalidId)
-//                .then()
-//                .assertThat()
-//                .body("message", equalTo("Курьера с таким id нет"));
-//    }
-
 
     @Test
-    @DisplayName("Check body of /api/v1/courier/:id when id is valid")
-    public void checkMessageDeleteCourierWhenDataIsValid() {
-        given()
-                .when()
-                .delete(EndPoints.COURIER_REGISTER_OR_DELETE + courierId)
-                .then()
-                .assertThat()
-                .body("ok", equalTo(true));
+    @DisplayName("Delete courier")
+    public void deleteCourierValid() {
+
+        courierId = scooterGenerateCurierData.createRandomCourier();
+        boolean isCourierDeleted = courierApiClient.deleteCourier(courierId).assertThat().statusCode(200).extract().path("ok");
+        assertTrue("Курьер не удален", isCourierDeleted);
     }
 
-//    @Test
-//    @DisplayName("Check message error of /api/v1/courier/:id when id is missing")
-//    public void checkMessageErrorDeleteCourierWhenIdMissing() {
-//        given()
-//                .when()
-//                .delete(api.endpoints.EndPoints.COURIER_REGISTER_OR_DELETE)
-//                .then()
-//                .assertThat()
-//                .body("message", equalTo("Недостаточно данных для удаления курьера"));
-//    }
+    @Test
+    @DisplayName("Delete courier with undefinded id")
+    public void deleteCourierWithInvalidId() {
+        courierId = 0;
+        String message = "Курьера с таким id нет";
 
+        ValidatableResponse response = (ValidatableResponse) courierApiClient.deleteCourier(courierId);
+        int statusCode = response.extract().statusCode();
+        String courierDeleted = response.extract().path("message");
 
+        assertEquals("statusCode неверный", 404, statusCode);
+        assertTrue("Сообщение о удалении курьера некорректно", courierDeleted.contains(message));
+    }
+
+    @Test
+    @DisplayName("Delete courier without id")
+    public void deleteCourierWithoutId() {
+        String message = "Недостаточно данных для удаления курьера";
+
+        ValidatableResponse response = given()
+                .header("Content-type", "application/json")
+                .when()
+                .delete(EndPoints.BASE_URL + EndPoints.COURIER_URL)
+                .then();
+        int statusCode = response.extract().statusCode();
+        String courierDeleted = response.extract().path("message");
+
+        assertEquals("statusCode неверный", 404, statusCode);
+        assertTrue("Сообщение о недостаточности данных некорректно", courierDeleted.contains(message));
+    }
 }
