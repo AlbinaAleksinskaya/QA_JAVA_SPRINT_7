@@ -1,3 +1,6 @@
+import api.endpoints.EndPoints;
+import api.models.Courier;
+import api.models.ScooterRegisterCourier;
 import io.qameta.allure.junit4.DisplayName;
 import io.restassured.path.json.JsonPath;
 import org.apache.commons.lang3.RandomUtils;
@@ -44,7 +47,7 @@ public class ScooterDeleteCourierTest extends BaseTest {
 //    public void checkMessageErrorDeleteCourierWhenIdNonExist() {
 //        given()
 //                .when()
-//                .delete(EndPoints.COURIER_REGISTER_OR_DELETE + invalidId)
+//                .delete(api.endpoints.EndPoints.COURIER_REGISTER_OR_DELETE + invalidId)
 //                .then()
 //                .assertThat()
 //                .body("message", equalTo("Курьера с таким id нет"));
@@ -67,7 +70,7 @@ public class ScooterDeleteCourierTest extends BaseTest {
 //    public void checkMessageErrorDeleteCourierWhenIdMissing() {
 //        given()
 //                .when()
-//                .delete(EndPoints.COURIER_REGISTER_OR_DELETE)
+//                .delete(api.endpoints.EndPoints.COURIER_REGISTER_OR_DELETE)
 //                .then()
 //                .assertThat()
 //                .body("message", equalTo("Недостаточно данных для удаления курьера"));

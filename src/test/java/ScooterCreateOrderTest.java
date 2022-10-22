@@ -1,3 +1,5 @@
+import api.endpoints.EndPoints;
+import api.models.Order;
 import io.qameta.allure.junit4.DisplayName;
 import io.restassured.path.json.JsonPath;
 import io.restassured.response.Response;

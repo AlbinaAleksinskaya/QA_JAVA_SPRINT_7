@@ -1,3 +1,6 @@
+import api.endpoints.EndPoints;
+import api.models.Courier;
+import api.models.ScooterRegisterCourier;
 import io.qameta.allure.junit4.DisplayName;
 import io.restassured.path.json.JsonPath;
 import org.apache.commons.lang3.RandomUtils;
@@ -64,7 +67,7 @@ public class ScooterAcceptOrderByCourierTest extends  BaseTest {
 //        given()
 //                .when()
 //                .queryParam("courierId", courierId)
-//                .put(EndPoints.ORDER_ACCEPT)
+//                .put(api.endpoints.EndPoints.ORDER_ACCEPT)
 //                .then()
 //                .assertThat()
 //                .statusCode(HttpURLConnection.HTTP_BAD_REQUEST)

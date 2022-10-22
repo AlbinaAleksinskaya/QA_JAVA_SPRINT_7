@@ -1,9 +1,15 @@
+import api.client.CourierClient;
+import api.endpoints.EndPoints;
+import api.models.Courier;
+import api.models.ScooterRegisterCourier;
 import io.qameta.allure.junit4.DisplayName;
 import io.restassured.path.json.JsonPath;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
 
 import java.net.HttpURLConnection;
 import java.util.ArrayList;
@@ -19,10 +25,13 @@ public class ScooterLoginCourierTest extends BaseTest {
     private String login;
     private String password;
     private String random = RandomStringUtils.randomAlphabetic(10);
+    private CourierClient courierClient;
+    private Courier courier;
 
 
     @Before
     public void setUp() {
+        courierClient = new CourierClient();
         ScooterRegisterCourier scooterRegisterCourier = new ScooterRegisterCourier();
         ArrayList<String> loginPass = scooterRegisterCourier.registerNewCourierAndReturnLoginPassword();
         login = loginPass.get(0);
@@ -42,20 +51,7 @@ public class ScooterLoginCourierTest extends BaseTest {
         delete(EndPoints.COURIER_REGISTER_OR_DELETE + userId);
     }
 
-    @Test
-    @DisplayName("Check status code and body of /api/v1/courier/login when data is valid")
-    public void checkStatusCodeLoginCourierWithValidData() {
-        Courier courier = new Courier(login, password);
-        given()
-                .body(courier)
-                .when()
-                .post(EndPoints.COURIER_LOGIN)
-                .then()
-                .assertThat()
-                .statusCode(HttpURLConnection.HTTP_OK)
-                .and()
-                .body("id", notNullValue());
-    }
+
 
     @Test
     @DisplayName("Check status code and body of /api/v1/courier/login when login is valid, but password is invalid")
@@ -102,23 +98,6 @@ public class ScooterLoginCourierTest extends BaseTest {
                 .body("message", equalTo("Учетная запись не найдена"));
     }
 
-
-//    @Test
-//    @DisplayName("Check status code and body of /api/v1/courier/login when password field is missing")
-//    public  void checkStatusCodeBodyLoginCourierWithoutFillInPassword() {
-//        Courier courier = new Courier(login);
-//        given()
-//                .body(courier)
-//                .when()
-//                .post(EndPoints.COURIER_LOGIN)
-//                .then()
-//                .assertThat()
-//                .statusCode(HttpURLConnection.HTTP_BAD_REQUEST)
-//                .and()
-//                .body("message", equalTo("Недостаточно данных для входа"));
-//    }
-
-
     @Test
     @DisplayName("Check status code and body of /api/v1/courier/login when login field is missing")
     public  void checkStatusCodeBodyLoginCourierWithoutFillInLogin() {
@@ -133,5 +112,4 @@ public class ScooterLoginCourierTest extends BaseTest {
                 .and()
                 .body("message", equalTo("Недостаточно данных для входа"));
     }
-
 }

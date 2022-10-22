@@ -1,3 +1,5 @@
+package api.models;
+
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.RandomUtils;
 
@@ -113,7 +115,7 @@ public class Order {
 
     @Override
     public String toString() {
-        return "Order{" +
+        return "api.models.Order{" +
                 "firstName='" + firstName + '\'' +
                 ", lastName='" + lastName + '\'' +
                 ", address='" + address + '\'' +
