@@ -1,137 +1,78 @@
+import api.client.CourierClient;
+import api.models.Courier;
 import io.qameta.allure.junit4.DisplayName;
 import io.restassured.path.json.JsonPath;
+import io.restassured.response.Response;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.net.HttpURLConnection;
-import java.util.ArrayList;
 
-import static io.restassured.RestAssured.delete;
-import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
 
 public class ScooterLoginCourierTest extends BaseTest {
 
-
-    private String login;
-    private String password;
-    private String random = RandomStringUtils.randomAlphabetic(10);
-
+    private Courier courier;
 
     @Before
     public void setUp() {
-        ScooterRegisterCourier scooterRegisterCourier = new ScooterRegisterCourier();
-        ArrayList<String> loginPass = scooterRegisterCourier.registerNewCourierAndReturnLoginPassword();
-        login = loginPass.get(0);
-        password = loginPass.get(1);
+        CourierClient courierClient = new CourierClient();
+        courier = courierClient.registerCourier();
     }
 
     @After
-    public void tearDown() {
-        Courier registerCourierLogin = new Courier(login, password);
-        String response = given()
-                .body(registerCourierLogin)
-                .when()
-                .post(EndPoints.COURIER_LOGIN)
-                .asString();
-        JsonPath jsonPath = new JsonPath(response);
+    public void afterMethod() {
+        CourierClient courierClient = new CourierClient();
+        Response response = courierClient.getResponseForRegisterRequest(courier);
+        JsonPath jsonPath = new JsonPath(response.asString());
         String userId = jsonPath.getString("id");
-        delete(EndPoints.COURIER_REGISTER_OR_DELETE + userId);
+        courierClient.deleteCourier(userId);
     }
 
     @Test
-    @DisplayName("Check status code and body of /api/v1/courier/login when data is valid")
-    public void checkStatusCodeLoginCourierWithValidData() {
-        Courier courier = new Courier(login, password);
-        given()
-                .body(courier)
-                .when()
-                .post(EndPoints.COURIER_LOGIN)
-                .then()
-                .assertThat()
-                .statusCode(HttpURLConnection.HTTP_OK)
-                .and()
-                .body("id", notNullValue());
+    @DisplayName("Check response for correct login and password")
+    public void testResponseForCorrectLoginData() {
+        CourierClient courierClient = new CourierClient();
+        Response response = courierClient.getResponseForLoginRequest(courier);
+        response.then().assertThat().statusCode(HttpURLConnection.HTTP_OK).and().assertThat().body("id", notNullValue());
     }
 
     @Test
-    @DisplayName("Check status code and body of /api/v1/courier/login when login is valid, but password is invalid")
-    public void checkStatusCodeBodyLoginCourierWithIncorrectPassword() {
-        Courier courier = new Courier(login, random);
-        given()
-                .body(courier)
-                .when()
-                .post(EndPoints.COURIER_LOGIN)
-                .then()
-                .assertThat()
-                .statusCode(HttpURLConnection.HTTP_NOT_FOUND)
-                .and()
-                .body("message", equalTo("Учетная запись не найдена"));
+    @DisplayName("Check response for incorrect login")
+    public void testResponseForIncorrectLogin() {
+        CourierClient courierClient = new CourierClient();
+        Response response = courierClient.getResponseForLoginRequest(new Courier("incorrectLogin", courier.getPassword()));
+        response.then().assertThat().statusCode(HttpURLConnection.HTTP_NOT_FOUND).and().assertThat().body("message", equalTo("Учетная запись не найдена"));
     }
 
     @Test
-    @DisplayName("Check status code and body of /api/v1/courier/login when login is invalid, but password is valid")
-    public void checkStatusCodeBodyLoginCourierWithIncorrectLogin() {
-        Courier courier = new Courier(random, password);
-        given()
-                .body(courier)
-                .when()
-                .post(EndPoints.COURIER_LOGIN)
-                .then()
-                .assertThat()
-                .statusCode(HttpURLConnection.HTTP_NOT_FOUND)
-                .and()
-                .body("message", equalTo("Учетная запись не найдена"));
+    @DisplayName("Check response for incorrect password")
+    public void testResponseForIncorrectPassword() {
+        CourierClient courierClient = new CourierClient();
+        Response response = courierClient.getResponseForLoginRequest(new Courier(courier.getLogin(), "incorrectPassword"));
+        response.then().assertThat().statusCode(HttpURLConnection.HTTP_NOT_FOUND).and().assertThat().body("message", equalTo("Учетная запись не найдена"));
     }
 
     @Test
-    @DisplayName("Check status code and body of /api/v1/courier/login when login and password invalid")
-    public void checkStatusCodeBodyLoginWithNonExistCourier() {
-        Courier courier = new Courier(random, random);
-        given()
-                .body(courier)
-                .when()
-                .post(EndPoints.COURIER_LOGIN)
-                .then()
-                .assertThat()
-                .statusCode(HttpURLConnection.HTTP_NOT_FOUND)
-                .and()
-                .body("message", equalTo("Учетная запись не найдена"));
+    @DisplayName("Check response for incorrect login and password")
+    public void testResponseForNonExistsCourier() {
+        String randomWord = RandomStringUtils.randomAlphabetic(10);
+        Courier courier = new Courier(randomWord, randomWord);
+        CourierClient courierClient = new CourierClient();
+        Response response = courierClient.getResponseForLoginRequest(courier);
+        response.then().assertThat().statusCode(HttpURLConnection.HTTP_NOT_FOUND).and().assertThat().body("message", equalTo("Учетная запись не найдена"));
     }
 
-
-//    @Test
-//    @DisplayName("Check status code and body of /api/v1/courier/login when password field is missing")
-//    public  void checkStatusCodeBodyLoginCourierWithoutFillInPassword() {
-//        Courier courier = new Courier(login);
-//        given()
-//                .body(courier)
-//                .when()
-//                .post(EndPoints.COURIER_LOGIN)
-//                .then()
-//                .assertThat()
-//                .statusCode(HttpURLConnection.HTTP_BAD_REQUEST)
-//                .and()
-//                .body("message", equalTo("Недостаточно данных для входа"));
-//    }
-
-
     @Test
-    @DisplayName("Check status code and body of /api/v1/courier/login when login field is missing")
-    public  void checkStatusCodeBodyLoginCourierWithoutFillInLogin() {
+    @DisplayName("Check response for login without login field")
+    public void testResponseForAuthWithoutLoginField() {
+        CourierClient courierClient = new CourierClient();
+        String password = "pass";
         String registerBody = "{\"password\":\"" + password + "\"}";
-        given()
-                .body(registerBody)
-                .when()
-                .post(EndPoints.COURIER_LOGIN)
-                .then()
-                .assertThat()
-                .statusCode(HttpURLConnection.HTTP_BAD_REQUEST)
-                .and()
-                .body("message", equalTo("Недостаточно данных для входа"));
+        Response response = courierClient.getResponseForLoginWithCustomRequest(registerBody);
+        response.then().assertThat().statusCode(HttpURLConnection.HTTP_BAD_REQUEST).and().assertThat().body("message", equalTo("Недостаточно данных для входа"));
     }
-
 }

@@ -1,3 +1,5 @@
+import api.client.OrdersClient;
+import api.models.Order;
 import io.qameta.allure.junit4.DisplayName;
 import io.restassured.path.json.JsonPath;
 import io.restassured.response.Response;
@@ -5,16 +7,14 @@ import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-
 import java.net.HttpURLConnection;
 
-import static io.restassured.RestAssured.*;
 import static org.hamcrest.Matchers.notNullValue;
 
 @RunWith(Parameterized.class)
 public class ScooterCreateOrderTest extends BaseTest {
 
-    private String[] color;
+    private final String[] color;
     private int track;
 
     public ScooterCreateOrderTest(String[] color) {
@@ -24,31 +24,26 @@ public class ScooterCreateOrderTest extends BaseTest {
     @Parameterized.Parameters
     public static Object[][] getOrderData() {
         return new Object[][]{
-                { new String[] {"BLACK"}},
-                { new String[] {"GREY"}},
-                { new String[] {"BLACK", "GREY"}},
-                { new String[] {}}
+                {new String[]{"BLACK", "GREY"}},
+                {new String[]{"BLACK"}},
+                {new String[]{"GREY"}},
+                {new String[]{}}
         };
     }
 
     @After
-    public void tearDown() {
-        String cancelBody = "{\"track\":" + track + "}";
-        given()
-                .body(cancelBody)
-                .when()
-                .put(EndPoints.ORDER_CANCEL);
+    public void afterMethod() {
+        OrdersClient orderClient = new OrdersClient();
+        orderClient.cancelOrder(track);
     }
 
     @Test
-    @DisplayName("Check status code and track of /api/v1/orders when data is valid (full check for field color)")
-    public void checkStatusCodeAndBodyCreateOrderWithValidData() {
+    @DisplayName("Check response when data is valid")
+    public void testCheckResponseCreateOrderWithValidData() {
+        OrdersClient orderClient = new OrdersClient();
         Order order = new Order(color);
         order.setUpFieldsForRequest();
-        Response response = given()
-                .body(order)
-                .when()
-                .post(EndPoints.ORDER_CREATE_OR_GET);
+        Response response = orderClient.getResponseForOrders(order);
         response.then()
                 .assertThat()
                 .statusCode(HttpURLConnection.HTTP_CREATED)

@@ -1,6 +1,7 @@
+package api.models;
+
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.RandomUtils;
-
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.Objects;
@@ -17,75 +18,13 @@ public class Order {
     private String[] color;
     static private String randomString = RandomStringUtils.randomAlphabetic(10);
     static private int randomInt = RandomUtils.nextInt(1, 11);
-    static private String randomDate = LocalDate.now().plusDays(RandomUtils.nextInt(1,31)).toString();
-
-    public Order(String firstName, String lastName, String address, String metroStation, String phone, int rentTime, String deliveryDate, String comment, String[] color) {
-        this.firstName = firstName;
-        this.lastName = lastName;
-        this.address = address;
-        this.metroStation = metroStation;
-        this.phone = phone;
-        this.rentTime = rentTime;
-        this.deliveryDate = deliveryDate;
-        this.comment = comment;
-        this.color = color;
-    }
-
-    public Order(String firstName, String lastName, String address, String metroStation, String phone, int rentTime, String deliveryDate, String comment) {
-        this.firstName = firstName;
-        this.lastName = lastName;
-        this.address = address;
-        this.metroStation = metroStation;
-        this.phone = phone;
-        this.rentTime = rentTime;
-        this.deliveryDate = deliveryDate;
-        this.comment = comment;
-    }
+    static private String randomDate = LocalDate.now().plusDays(RandomUtils.nextInt(1, 31)).toString();
 
     public Order(String[] color) {
         this.color = color;
     }
 
-    public Order() {
-    }
-
-    public String getFirstName() {
-        return firstName;
-    }
-
-    public String getLastName() {
-        return lastName;
-    }
-
-    public String getAddress() {
-        return address;
-    }
-
-    public String getMetroStation() {
-        return metroStation;
-    }
-
-    public String getPhone() {
-        return phone;
-    }
-
-    public int getRentTime() {
-        return rentTime;
-    }
-
-    public String getDeliveryDate() {
-        return deliveryDate;
-    }
-
-    public String getComment() {
-        return comment;
-    }
-
-    public String[] getColor() {
-        return color;
-    }
-
-    public void setUpFieldsForRequest () {
+    public void setUpFieldsForRequest() {
         this.firstName = randomString;
         this.lastName = randomString;
         this.address = randomString;
