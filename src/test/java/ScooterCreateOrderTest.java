@@ -1,54 +1,56 @@
+import api.client.OrdersClient;
+import api.models.Order;
 import io.qameta.allure.junit4.DisplayName;
-import io.restassured.response.ValidatableResponse;
-import org.junit.Before;
+import io.restassured.path.json.JsonPath;
+import io.restassured.response.Response;
+import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-import api.client.OrdersClient;
-import api.models.Order;
+import java.net.HttpURLConnection;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
+import static org.hamcrest.Matchers.notNullValue;
 
 @RunWith(Parameterized.class)
-public class ScooterCreateOrderTest {
-    private OrdersClient ordersApiClient;
-    private int track;
+public class ScooterCreateOrderTest extends BaseTest {
 
     private final String[] color;
+    private int track;
 
     public ScooterCreateOrderTest(String[] color) {
         this.color = color;
     }
 
     @Parameterized.Parameters
-    public static Object[][] getColorList() {
+    public static Object[][] getOrderData() {
         return new Object[][]{
+                {new String[]{"BLACK", "GREY"}},
                 {new String[]{"BLACK"}},
                 {new String[]{"GREY"}},
-                {new String[]{"GREY", "BLACK"}},
-                {new String[0]}
-
+                {new String[]{}}
         };
     }
 
-    @Before
-    public void setUp() {
-        ordersApiClient = new OrdersClient();
+    @After
+    public void afterMethod() {
+        OrdersClient orderClient = new OrdersClient();
+        orderClient.cancelOrder(track);
     }
 
     @Test
-    @DisplayName("Create order")
-    public void createOrderWithColors() {
-        Order order = Order.getRandom();
-        order.setColor(color);
-
-        ValidatableResponse response = (ValidatableResponse) ordersApiClient.createOrders(order);
-        int statusCode = response.extract().statusCode();
-        track = response.extract().path("track");
-
-        assertEquals("statusCode неверный", 201, statusCode);
-        assertNotEquals("Track некоректный", 0, track);
+    @DisplayName("Check response when data is valid")
+    public void testCheckResponseCreateOrderWithValidData() {
+        OrdersClient orderClient = new OrdersClient();
+        Order order = new Order(color);
+        order.setUpFieldsForRequest();
+        Response response = orderClient.getResponseForOrders(order);
+        response.then()
+                .assertThat()
+                .statusCode(HttpURLConnection.HTTP_CREATED)
+                .and()
+                .body("track", notNullValue());
+        String responseString = response.asString();
+        JsonPath jsonPath = new JsonPath(responseString);
+        track = jsonPath.getInt("track");
     }
-
 }

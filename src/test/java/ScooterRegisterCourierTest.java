@@ -1,76 +1,82 @@
 import api.client.CourierClient;
-import api.endpoints.EndPoints;
 import api.models.Courier;
-import api.utils.ScooterGenerateCurierData;
 import io.qameta.allure.junit4.DisplayName;
 import io.restassured.path.json.JsonPath;
-import io.restassured.response.ValidatableResponse;
+import io.restassured.response.Response;
 import org.apache.commons.lang3.RandomStringUtils;
-import org.junit.*;
+import org.junit.After;
+import org.junit.Test;
+import java.net.HttpURLConnection;
 
-import static io.restassured.RestAssured.*;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 public class ScooterRegisterCourierTest extends BaseTest {
-    private CourierClient courierClient;
-    private ScooterGenerateCurierData scooterGenerateCurierData;
-    private int courierId;
-    private Courier courier;
+    final private String login = RandomStringUtils.randomAlphabetic(10);
+    final private String password = RandomStringUtils.randomAlphabetic(10);
+    final private String firstName = RandomStringUtils.randomAlphabetic(10);
 
-    @Before
-    public void setUp() {
-        courierClient = new CourierClient();
-        scooterGenerateCurierData = new ScooterGenerateCurierData();
+    @After
+    public void afterMethod() {
+        Courier courier = new Courier(login, password);
+        CourierClient courierClient = new CourierClient();
+        Response response = courierClient.getResponseForRegisterRequest(courier);
+        JsonPath jsonPath = new JsonPath(response.asString());
+        String userId = jsonPath.getString("id");
+        courierClient.deleteCourier(userId);
     }
 
     @Test
-    @DisplayName("Create courier")
-    public void createCourierValidData() {
-        courier = Courier.getRandom();
-        ValidatableResponse response = courierClient.createCourier(courier);
-        int statusCode = response.extract().statusCode();
-        boolean courierCreated = response.extract().path("ok");
-        assertEquals("statusCode неверный", 201, statusCode);
-        assertTrue("Курьер не создан", courierCreated);
+    @DisplayName("Check response for create courier with valid data")
+    public void testCreateCourierWithValidData() {
+        Courier courier = new Courier(login, password, firstName);
+        CourierClient courierClient = new CourierClient();
+        Response response = courierClient.getResponseForRegisterRequest(courier);
+        response.then()
+                .assertThat()
+                .statusCode(HttpURLConnection.HTTP_CREATED)
+                .and()
+                .body("ok", equalTo(true));
     }
 
     @Test
-    @DisplayName("Create courier without password")
-    public void createCourierWithoutPassword(){
-        courier = new Courier(RandomStringUtils.randomAlphabetic(10), "", RandomStringUtils.randomAlphabetic(10));
-        String message = "Недостаточно данных для создания учетной записи";
-        ValidatableResponse response = courierClient.createCourier(courier);
-        int statusCode = response.extract().statusCode();
-        String courierWithoutCredentials = response.extract().path("message");
-        assertEquals("statusCode неверный", 400, statusCode);
-        assertTrue("Сообщение о создании курьера некорректно", courierWithoutCredentials.contains(message));
+    @DisplayName("Check response for create courier duplicate")
+    public void testCreateDuplicateCourier() {
+        CourierClient courierClient = new CourierClient();
+        Courier courier = courierClient.registerCourier();
+        Response response = courierClient.getResponseForRegisterRequest(courier);
+        response.then()
+                .assertThat()
+                .statusCode(HttpURLConnection.HTTP_CONFLICT)
+                .and()
+                .body("message", equalTo("Этот логин уже используется. Попробуйте другой."));
     }
 
-
     @Test
-    @DisplayName("Create courier without login")
-    public void createCourierWithoutLogin(){
-        courier = new Courier("", RandomStringUtils.randomAlphabetic(10), RandomStringUtils.randomAlphabetic(10));
-        String message = "Недостаточно данных для создания учетной записи";
-        ValidatableResponse response = courierClient.createCourier(courier);
-        int statusCode = response.extract().statusCode();
-        String courierWithoutCredentials = response.extract().path("message");
-        assertEquals("statusCode неверный", 400, statusCode);
-        assertTrue("Сообщение о создании курьера некорректно", courierWithoutCredentials.contains(message));
-     }
-
-    @Test
-    @DisplayName("Create courier with used login")
-    public void createSecondIsSameCourierError() {
-        courier = Courier.getRandom();
-        String message = "Этот логин уже используется";
-        boolean courierCreated = scooterGenerateCurierData.createCourier(courier);
-        ValidatableResponse response = courierClient.createCourier(courier);
-        int statusCode = response.extract().statusCode();
-        String secondCourierCreated = response.extract().path("message");
-        assertEquals("statusCode неверный", 409, statusCode);
-        assertTrue("Сообщение о создании второго такого же курьера некорректно", secondCourierCreated.contains(message));
+    @DisplayName("Check response for login when password field is missing")
+    public void testCreateCourierWithoutFillInPassword() {
+        String registerBody = "{\"login\":\"" + login + "\","
+                + "\"firstName\":\"" + firstName + "\"}";
+        CourierClient courierClient = new CourierClient();
+        Response response = courierClient.getResponseForRegisterWithCustomBodyRequest(registerBody);
+        response.then()
+                .assertThat()
+                .statusCode(HttpURLConnection.HTTP_BAD_REQUEST)
+                .and()
+                .body("message", equalTo("Недостаточно данных для создания учетной записи"));
     }
+
+    @Test
+    @DisplayName("Check response for login when login field is missing")
+    public void testCreateCourierWithoutFillInLogin() {
+        String registerBody = "{\"password\":\"" + password + "\","
+                + "\"firstName\":\"" + firstName + "\"}";
+        CourierClient courierClient = new CourierClient();
+        Response response = courierClient.getResponseForRegisterWithCustomBodyRequest(registerBody);
+        response.then()
+                .assertThat()
+                .statusCode(HttpURLConnection.HTTP_BAD_REQUEST)
+                .and()
+                .body("message", equalTo("Недостаточно данных для создания учетной записи"));
+    }
+
 }

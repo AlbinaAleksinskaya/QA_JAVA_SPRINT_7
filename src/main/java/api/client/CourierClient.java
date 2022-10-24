@@ -2,54 +2,75 @@ package api.client;
 
 import io.qameta.allure.Step;
 import io.restassured.response.Response;
-import io.restassured.response.ValidatableResponse;
-import static io.restassured.RestAssured.given;
+import api.models.Courier;
+import org.apache.commons.lang3.RandomStringUtils;
 import api.endpoints.EndPoints;
 
+import static io.restassured.RestAssured.delete;
+import static io.restassured.RestAssured.given;
 
 public class CourierClient {
 
-    public final String PATH = EndPoints.BASE_URL + EndPoints.COURIER_URL;
+    private final static String COURIER_PATH = EndPoints.COURIER_PATH;
+    private final static String COURIER_LOGIN_PATH = EndPoints.COURIER_LOGIN_PATH;
 
-    @Step("Get response for incorrect password")
-    public Response getIncorrectPasswordResponse(Object body) {
-        return (Response) given()
+    @Step("Get response for login request")
+    public Response getResponseForLoginRequest(Object body) {
+        return given()
                 .header("Content-type", "application/json")
                 .and()
                 .body(body)
                 .when()
-                .post(PATH + "login/")
-                .then();
+                .post(COURIER_LOGIN_PATH);
     }
 
-    @Step("Create courier")
-    public ValidatableResponse createCourier(Object courier) {
+    @Step("Get response for register request")
+    public Response getResponseForRegisterRequest(Object body) {
         return given()
                 .header("Content-type", "application/json")
                 .and()
-                .body(courier)
+                .body(body)
                 .when()
-                .post(PATH)
-                .then();
+                .post(COURIER_PATH);
     }
 
-    @Step("Login courier")
-    public Response loginCourier(Object courierCredentials) {
-        return (Response) given()
+    @Step("Get response for register request")
+    public Response getResponseForRegisterWithCustomBodyRequest(String body) {
+        return given()
                 .header("Content-type", "application/json")
                 .and()
-                .body(courierCredentials)
+                .body(body)
                 .when()
-                .post(PATH + "login/")
-                .then();
+                .post(COURIER_PATH);
     }
 
-    @Step("Delete courier")
-    public Response deleteCourier(int courierId) {
-        return (Response) given()
-                .header("Content-type", "application/json")
+    @Step("Get response for delete request")
+    public void deleteCourier(String userId) {
+        delete(COURIER_PATH + userId);
+    }
+
+    @Step("Get response for login with custom body")
+    public Response getResponseForLoginWithCustomRequest(String registerBody) {
+        return given()
+                .body(registerBody)
                 .when()
-                .delete(PATH + courierId)
-                .then();
+                .post(COURIER_LOGIN_PATH);
+    }
+
+    @Step("Register courier")
+    public Courier registerCourier() {
+        String login = RandomStringUtils.randomAlphabetic(10);
+        String password = RandomStringUtils.randomAlphabetic(10);
+        String firstName = RandomStringUtils.randomAlphabetic(10);
+        String registerRequestBody = "{\"login\":\"" + login + "\","
+                + "\"password\":\"" + password + "\","
+                + "\"firstName\":\"" + firstName + "\"}";
+        Response response = getResponseForRegisterWithCustomBodyRequest(registerRequestBody);
+        Courier courier = new Courier();
+        if (response.statusCode() == 201) {
+            courier.setLogin(login);
+            courier.setPassword(password);
+        }
+        return courier;
     }
 }

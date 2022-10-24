@@ -1,69 +1,78 @@
 import api.client.CourierClient;
 import api.models.Courier;
-import api.models.CourierCredentials;
-import api.utils.ScooterGenerateCurierData;
-import api.utils.ScooterGenerateOrderData;
 import io.qameta.allure.junit4.DisplayName;
-import io.restassured.response.ValidatableResponse;
+import io.restassured.path.json.JsonPath;
+import io.restassured.response.Response;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
+import java.net.HttpURLConnection;
+
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.notNullValue;
 
 public class ScooterLoginCourierTest extends BaseTest {
-    private String random = RandomStringUtils.randomAlphabetic(10);
-    private CourierClient courierClient;
-    private Courier courier;
-    private int courierId;
-    private ScooterGenerateOrderData scooterGenerateOrderData;
-    private ScooterGenerateCurierData scooterGenerateCurierData;
 
+    private Courier courier;
 
     @Before
     public void setUp() {
-        courierClient = new CourierClient();
-        scooterGenerateOrderData = new ScooterGenerateOrderData();
+        CourierClient courierClient = new CourierClient();
+        courier = courierClient.registerCourier();
     }
 
     @After
-    public void tearDown() {
-        boolean isCourierDeleted = scooterGenerateCurierData.deleteCourier(courierId);
-        assertTrue("Курьер не удален", isCourierDeleted);
+    public void afterMethod() {
+        CourierClient courierClient = new CourierClient();
+        Response response = courierClient.getResponseForRegisterRequest(courier);
+        JsonPath jsonPath = new JsonPath(response.asString());
+        String userId = jsonPath.getString("id");
+        courierClient.deleteCourier(userId);
     }
 
     @Test
-    @DisplayName("Courier auth")
-    public void loginCourierValid() {
-        courier = new Courier(RandomStringUtils.randomAlphabetic(10), RandomStringUtils.randomAlphabetic(10), RandomStringUtils.randomAlphabetic(10));
-        ValidatableResponse response = (ValidatableResponse) courierClient.loginCourier(CourierCredentials.getCredentials(courier));
-        int statusCode = response.extract().statusCode();
-        courierId = response.extract().path("id");
-
-        assertEquals("statusCode неверный", 200, statusCode);
-        assertNotEquals("Id курьера некоректный", 0, courierId);
+    @DisplayName("Check response for correct login and password")
+    public void testResponseForCorrectLoginData() {
+        CourierClient courierClient = new CourierClient();
+        Response response = courierClient.getResponseForLoginRequest(courier);
+        response.then().assertThat().statusCode(HttpURLConnection.HTTP_OK).and().assertThat().body("id", notNullValue());
     }
 
     @Test
-    @DisplayName("Auth courier with invalid data")
-    public void loginCourierInvalid() {
-        String message = "Учетная запись не найдена";
-        ValidatableResponse response = (ValidatableResponse) courierClient.loginCourier(courier);
-        int statusCode = response.extract().statusCode();
-        String errorMessage = response.extract().path("message");
-        assertEquals("statusCode неверный", 404, statusCode);
-        assertTrue("Сообщение об ошибке некорректно", errorMessage.contains(message));
+    @DisplayName("Check response for incorrect login")
+    public void testResponseForIncorrectLogin() {
+        CourierClient courierClient = new CourierClient();
+        Response response = courierClient.getResponseForLoginRequest(new Courier("incorrectLogin", courier.getPassword()));
+        response.then().assertThat().statusCode(HttpURLConnection.HTTP_NOT_FOUND).and().assertThat().body("message", equalTo("Учетная запись не найдена"));
     }
 
     @Test
-    @DisplayName("Auth courier with nullable login")
-    public void loginCourierEmptyLogin() {
-        String message = "Недостаточно данных для входа";
-        ValidatableResponse response = (ValidatableResponse) courierClient.loginCourier(courier);
-        int statusCode = response.extract().statusCode();
-        String errorMessage = response.extract().path("message");
-        assertEquals("statusCode неверный", 400, statusCode);
-        assertTrue("Сообщение об ошибке некорректно", errorMessage.contains(message));
+    @DisplayName("Check response for incorrect password")
+    public void testResponseForIncorrectPassword() {
+        CourierClient courierClient = new CourierClient();
+        Response response = courierClient.getResponseForLoginRequest(new Courier(courier.getLogin(), "incorrectPassword"));
+        response.then().assertThat().statusCode(HttpURLConnection.HTTP_NOT_FOUND).and().assertThat().body("message", equalTo("Учетная запись не найдена"));
+    }
+
+    @Test
+    @DisplayName("Check response for incorrect login and password")
+    public void testResponseForNonExistsCourier() {
+        String randomWord = RandomStringUtils.randomAlphabetic(10);
+        Courier courier = new Courier(randomWord, randomWord);
+        CourierClient courierClient = new CourierClient();
+        Response response = courierClient.getResponseForLoginRequest(courier);
+        response.then().assertThat().statusCode(HttpURLConnection.HTTP_NOT_FOUND).and().assertThat().body("message", equalTo("Учетная запись не найдена"));
+    }
+
+    @Test
+    @DisplayName("Check response for login without login field")
+    public void testResponseForAuthWithoutLoginField() {
+        CourierClient courierClient = new CourierClient();
+        String password = "pass";
+        String registerBody = "{\"password\":\"" + password + "\"}";
+        Response response = courierClient.getResponseForLoginWithCustomRequest(registerBody);
+        response.then().assertThat().statusCode(HttpURLConnection.HTTP_BAD_REQUEST).and().assertThat().body("message", equalTo("Недостаточно данных для входа"));
     }
 }

@@ -1,7 +1,6 @@
 package api.models;
 
 import java.util.Objects;
-import org.apache.commons.lang3.RandomStringUtils;
 
 public class Courier {
 
@@ -20,17 +19,6 @@ public class Courier {
         this.password = password;
     }
 
-    public static Courier getRandom() {
-        String login = RandomStringUtils.randomAlphabetic(10);
-        String password = RandomStringUtils.randomAlphabetic(10);
-        String firstName = RandomStringUtils.randomAlphabetic(10);
-        return new Courier(login, password, firstName);
-    }
-
-    public Courier(String login) {
-        this.login = login;
-    }
-
     public Courier() {
     }
 
@@ -42,20 +30,12 @@ public class Courier {
         return password;
     }
 
-    public String getFirstName() {
-        return firstName;
-    }
-
     public void setLogin(String login) {
         this.login = login;
     }
 
     public void setPassword(String password) {
         this.password = password;
-    }
-
-    public void setFirstName(String firstName) {
-        this.firstName = firstName;
     }
 
     @Override
@@ -73,7 +53,7 @@ public class Courier {
 
     @Override
     public String toString() {
-        return "api.models.Courier{" +
+        return "Courier{" +
                 "login='" + login + '\'' +
                 ", password='" + password + '\'' +
                 ", firstName='" + firstName + '\'' +

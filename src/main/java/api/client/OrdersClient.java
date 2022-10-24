@@ -1,97 +1,35 @@
 package api.client;
 
 import io.qameta.allure.Step;
+import io.qameta.allure.internal.shadowed.jackson.annotation.JsonInclude;
 import io.restassured.response.Response;
-import static io.restassured.RestAssured.given;
 import api.endpoints.EndPoints;
+import static io.restassured.RestAssured.given;
 
 public class OrdersClient {
 
-    public final String PATH = EndPoints.BASE_URL +EndPoints.ORDER_URL;
+    private final static String ORDER_PATH = EndPoints.ORDER_PATH;
 
-    @Step("Create order")
-    public Response createOrders(Object order) {
-        return (Response) given()
-                .header("Content-type", "application/json")
-                .and()
-                .body(order)
-                .when()
-                .post(PATH)
-                .then();
+    private final static String ORDER_CANCEL = EndPoints.ORDER_CANCEL;
+
+    @Step("Get response for orders")
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public Response getResponseForOrders(Object body) {
+        return given().header("Content-type", "application/json").and().body(body).when().post(ORDER_PATH);
+    }
+
+    @Step("Get response for orders")
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public Response getResponseForOrders() {
+        return given().header("Content-type", "application/json").and().when().get(ORDER_PATH);
     }
 
     @Step("Cancel order")
-    public Response cancelOrders(int orderTrack) {
-        return (Response) given()
-                .header("Content-type", "application/json")
-                .and()
-                .body(orderTrack)
+    public void cancelOrder(int track) {
+        String cancelBody = "{\"track\":" + track + "}";
+        given()
+                .body(cancelBody)
                 .when()
-                .put(PATH + "/cancel")
-                .then();
-    }
-
-    @Step("Finish order")
-    public Response finishOrders(int id) {
-        String body = "{\"id\":\"" + id + "\"}";
-        return (Response) given()
-                .header("Content-type", "application/json")
-                .and()
-                .body(body)
-                .when()
-                .put(PATH + "/finish/" + id)
-                .then();
-    }
-
-    @Step("Get orders list")
-    public Response getListOfOrders() {
-        return given()
-                .header("Content-type", "application/json")
-                .and()
-                .when()
-                .get(PATH);
-    }
-
-    @Step("Agree order")
-    public Response acceptOrders(int orderId) {
-        return (Response) given()
-                .header("Content-type", "application/json")
-                .and()
-                .when()
-                .put(PATH + "/accept/" + orderId)
-                .then();
-    }
-
-    @Step("Agree order of courier")
-    public Response acceptOrders(int orderId, int courierId) {
-        return (Response) given()
-                .header("Content-type", "application/json")
-                .and()
-                .when()
-                .queryParam("courierId", courierId)
-                .put(PATH + "/accept/" + orderId)
-                .then();
-    }
-
-
-    @Step("Get order with number of order")
-    public Response getOrdersByTrack(int track) {
-        return (Response) given()
-                .header("Content-type", "application/json")
-                .and()
-                .when()
-                .queryParam("t", track)
-                .get(PATH + "/track")
-                .then();
-    }
-
-    @Step("Get order without number of order")
-    public Response getOrdersByTrack() {
-        return (Response) given()
-                .header("Content-type", "application/json")
-                .and()
-                .when()
-                .get(PATH + "/track")
-                .then();
+                .put(ORDER_CANCEL);
     }
 }
